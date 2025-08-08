@@ -82,7 +82,7 @@ public class EventListener {
         if (e.type != TickEvent.Type.CLIENT) return;
         if (e.side != Side.CLIENT) return;
 
-        if (mcPlayer != null && e.phase == TickEvent.Phase.START) {
+        if (mcPlayer != null && e.phase == TickEvent.Phase.END) {
             AxisAlignedBB playerBB = mcPlayer.getEntityBoundingBox();
             new Player()
                     .setPos(new Vector3D(mcPlayer.posX, mcPlayer.posY, mcPlayer.posZ))
