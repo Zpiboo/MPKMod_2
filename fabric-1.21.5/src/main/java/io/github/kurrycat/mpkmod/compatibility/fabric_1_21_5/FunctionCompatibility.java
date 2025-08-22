@@ -23,7 +23,6 @@ import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.render.VertexRendering;
 import net.minecraft.client.sound.PositionedSoundInstance;
-import net.minecraft.client.util.Window;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.registry.Registries;
 import net.minecraft.sound.SoundEvents;
@@ -33,11 +32,10 @@ import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.profiler.Profilers;
-import org.lwjgl.opengl.GL11;
 
 import java.awt.*;
-import java.util.List;
 import java.util.*;
+import java.util.List;
 
 public class FunctionCompatibility implements FunctionHolder,
         SoundManager.Interface,
@@ -189,19 +187,17 @@ public class FunctionCompatibility implements FunctionHolder,
     }
 
     public void enableScissor(double x, double y, double w, double h) {
-        GL11.glEnable(GL11.GL_SCISSOR_TEST);
-        Window r = MinecraftClient.getInstance().getWindow();
-
-        double scaleFactor = r.getScaleFactor();
-        double posX = x * scaleFactor;
-        double posY = r.getFramebufferHeight() - (y + h) * scaleFactor;
-        double width = w * scaleFactor;
-        double height = h * scaleFactor;
-        GL11.glScissor((int) posX, (int) posY, Math.max(0, (int) width), Math.max(0, (int) height));
+        int x1 = (int) x;
+        int y1 = (int) y;
+        int x2 = (int) (x + w);
+        int y2 = (int) (y + h);
+        drawContext.enableScissor(x1, y1, x2, y2);
     }
 
     public void disableScissor() {
-        GL11.glDisable(GL11.GL_SCISSOR_TEST);
+        try {
+            drawContext.disableScissor();
+        } catch (IllegalStateException ignored) {}
     }
 
 
