@@ -125,7 +125,7 @@ public class FunctionCompatibility implements FunctionHolder,
 
     public void drawBox(BoundingBox3D bb, Color color, float partialTicks) {
         int r = color.getRed(), g = color.getGreen(), b = color.getBlue(), a = color.getAlpha();
-        
+
         RenderSystem.enableBlend();
         RenderSystem.enableDepthTest();
         RenderSystem.setShader(ShaderProgramKeys.POSITION_COLOR);
@@ -261,6 +261,20 @@ public class FunctionCompatibility implements FunctionHolder,
         } catch (IllegalStateException ignored) {}
     }
 
+    public void clearScissors() {
+        boolean clearedAll = false;
+        while (!clearedAll) {
+            try {
+                drawContext.disableScissor();
+            } catch (IllegalStateException e) {
+                clearedAll = true;
+            }
+        }
+    }
+
+    public boolean scissorContains(Vector2D point) {
+        return drawContext.scissorContains(point.getXI(), point.getYI());
+    }
 
     public void drawString(String text, double x, double y, Color color, double fontSize, boolean shadow) {
         if (drawContext == null) return;

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
+import io.github.kurrycat.mpkmod.compatibility.MCClasses.Renderer2D;
 import io.github.kurrycat.mpkmod.util.JSONPos2D;
 import io.github.kurrycat.mpkmod.util.Mouse;
 import io.github.kurrycat.mpkmod.util.Vector2D;
@@ -73,7 +74,8 @@ public abstract class Component extends ComponentHolder {
     public boolean contains(Vector2D testPos) {
         if (testPos == null) return false;
         if (getDisplayedPos() == null) return false;
-        return testPos.isInRectBetween(getDisplayedPos(), getDisplayedPos().add(getDisplayedSize()));
+        return Renderer2D.scissorContains(testPos) &&
+                testPos.isInRectBetween(getDisplayedPos(), getDisplayedPos().add(getDisplayedSize()));
     }
 
     @Override
