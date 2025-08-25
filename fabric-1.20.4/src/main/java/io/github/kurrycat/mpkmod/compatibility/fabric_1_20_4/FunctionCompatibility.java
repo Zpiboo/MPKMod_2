@@ -35,8 +35,8 @@ import org.joml.Matrix4f;
 import org.lwjgl.opengl.GL11;
 
 import java.awt.*;
-import java.util.List;
 import java.util.*;
+import java.util.List;
 
 public class FunctionCompatibility implements FunctionHolder,
         SoundManager.Interface,
@@ -49,6 +49,7 @@ public class FunctionCompatibility implements FunctionHolder,
         Profiler.Interface {
     public static final Set<Integer> pressedButtons = new HashSet<>();
     public DrawContext drawContext = null;
+    private static final Stack<ScissorBox> scissorStack = new Stack<>();
 
     public void playButtonSound() {
         MinecraftClient.getInstance().getSoundManager().play(PositionedSoundInstance.master(SoundEvents.UI_BUTTON_CLICK, 1.0F));
@@ -254,21 +255,50 @@ public class FunctionCompatibility implements FunctionHolder,
     }
 
     public void enableScissor(double x, double y, double w, double h) {
-        GL11.glEnable(GL11.GL_SCISSOR_TEST);
-        Window r = MinecraftClient.getInstance().getWindow();
-
-        double scaleFactor = r.getScaleFactor();
-        double posX = x * scaleFactor;
-        double posY = r.getFramebufferHeight() - (y + h) * scaleFactor;
-        double width = w * scaleFactor;
-        double height = h * scaleFactor;
-        GL11.glScissor((int) posX, (int) posY, Math.max(0, (int) width), Math.max(0, (int) height));
+        ScissorBox box;
+        if (scissorStack.isEmpty()) box = new ScissorBox(x, y, w, h);
+        else {
+            ScissorBox prev = scissorStack.peek();
+            double bx = Math.max(prev.x, x), by = Math.max(prev.y, y);
+            box = new ScissorBox(bx, by,
+                    Math.min(x + w, prev.x + prev.w) - bx,
+                    Math.min(y + h, prev.y + prev.h) - by
+            );
+        }
+        scissorStack.push(box);
+        setScissor(box);
     }
 
     public void disableScissor() {
-        GL11.glDisable(GL11.GL_SCISSOR_TEST);
+        if (!scissorStack.isEmpty()) scissorStack.pop();
+        if (scissorStack.isEmpty()) setScissor(null);
+        else setScissor(scissorStack.peek());
     }
 
+    public void clearScissors() {
+        scissorStack.clear();
+        setScissor(null);
+    }
+
+    private void setScissor(ScissorBox box) {
+        if (box == null) {
+            GL11.glDisable(GL11.GL_SCISSOR_TEST);
+        } else {
+            GL11.glEnable(GL11.GL_SCISSOR_TEST);
+            Window r = MinecraftClient.getInstance().getWindow();
+
+            double scaleFactor = r.getScaleFactor();
+            double posX = box.x * scaleFactor;
+            double posY = r.getFramebufferHeight() - (box.y + box.h) * scaleFactor;
+            double width = box.w * scaleFactor;
+            double height = box.h * scaleFactor;
+            GL11.glScissor((int) posX, (int) posY, Math.max(0, (int) width), Math.max(0, (int) height));
+        }
+    }
+
+    public boolean scissorContains(Vector2D point) {
+        return scissorStack.isEmpty() || scissorStack.peek().contains(point);
+    }
 
     public void drawString(String text, double x, double y, Color color, double fontSize, boolean shadow) {
         if (drawContext == null) return;
@@ -422,5 +452,21 @@ public class FunctionCompatibility implements FunctionHolder,
 
     public void endSection() {
         MinecraftClient.getInstance().getProfiler().pop();
+    }
+
+    private static class ScissorBox {
+        public double x, y, w, h;
+
+        public ScissorBox(double x, double y, double w, double h) {
+            this.x = x;
+            this.y = y;
+            this.w = w;
+            this.h = h;
+        }
+
+        public boolean contains(Vector2D point) {
+            return x <= point.getX() && point.getX() < x + w &&
+                    y <= point.getY() && point.getY() < y + h;
+        }
     }
 }

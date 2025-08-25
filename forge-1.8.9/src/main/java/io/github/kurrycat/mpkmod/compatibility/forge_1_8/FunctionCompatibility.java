@@ -47,6 +47,8 @@ public class FunctionCompatibility implements FunctionHolder,
         io.github.kurrycat.mpkmod.compatibility.MCClasses.Minecraft.Interface,
         io.github.kurrycat.mpkmod.compatibility.MCClasses.Keyboard.Interface,
         Profiler.Interface {
+    private static final Stack<ScissorBox> scissorStack = new Stack<>();
+
     /**
      * Is called in {@link SoundManager.Interface}
      */
@@ -249,20 +251,50 @@ public class FunctionCompatibility implements FunctionHolder,
     }
 
     public void enableScissor(double x, double y, double w, double h) {
-        GL11.glEnable(GL11.GL_SCISSOR_TEST);
-
-        ScaledResolution r = new ScaledResolution(Minecraft.getMinecraft());
-
-        double scaleFactor = r.getScaleFactor();
-        double posX = x * scaleFactor;
-        double posY = Minecraft.getMinecraft().displayHeight - (y + h) * scaleFactor;
-        double width = w * scaleFactor;
-        double height = h * scaleFactor;
-        GL11.glScissor((int) posX, (int) posY, Math.max(0, (int) width), Math.max(0, (int) height));
+        ScissorBox box;
+        if (scissorStack.isEmpty()) box = new ScissorBox(x, y, w, h);
+        else {
+            ScissorBox prev = scissorStack.peek();
+            double bx = Math.max(prev.x, x), by = Math.max(prev.y, y);
+            box = new ScissorBox(bx, by,
+                    Math.min(x + w, prev.x + prev.w) - bx,
+                    Math.min(y + h, prev.y + prev.h) - by
+            );
+        }
+        scissorStack.push(box);
+        setScissor(box);
     }
 
     public void disableScissor() {
-        GL11.glDisable(GL11.GL_SCISSOR_TEST);
+        if (!scissorStack.isEmpty()) scissorStack.pop();
+        if (scissorStack.isEmpty()) setScissor(null);
+        else setScissor(scissorStack.peek());
+    }
+
+    public void clearScissors() {
+        scissorStack.clear();
+        setScissor(null);
+    }
+
+    private void setScissor(ScissorBox box) {
+        if (box == null) {
+            GL11.glDisable(GL11.GL_SCISSOR_TEST);
+        } else {
+            GL11.glEnable(GL11.GL_SCISSOR_TEST);
+
+            ScaledResolution r = new ScaledResolution(Minecraft.getMinecraft());
+
+            double scaleFactor = r.getScaleFactor();
+            double posX = box.x * scaleFactor;
+            double posY = Minecraft.getMinecraft().displayHeight - (box.y + box.h) * scaleFactor;
+            double width = box.w * scaleFactor;
+            double height = box.h * scaleFactor;
+            GL11.glScissor((int) posX, (int) posY, Math.max(0, (int) width), Math.max(0, (int) height));
+        }
+    }
+
+    public boolean scissorContains(Vector2D point) {
+        return scissorStack.isEmpty() || scissorStack.peek().contains(point);
     }
 
     /**
@@ -431,5 +463,21 @@ public class FunctionCompatibility implements FunctionHolder,
      */
     public void endSection() {
         Minecraft.getMinecraft().mcProfiler.endSection();
+    }
+
+    private static class ScissorBox {
+        public double x, y, w, h;
+
+        public ScissorBox(double x, double y, double w, double h) {
+            this.x = x;
+            this.y = y;
+            this.w = w;
+            this.h = h;
+        }
+
+        public boolean contains(Vector2D point) {
+            return x <= point.getX() && point.getX() < x + w &&
+                    y <= point.getY() && point.getY() < y + h;
+        }
     }
 }
