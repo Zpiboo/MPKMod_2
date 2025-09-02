@@ -1,3 +1,7 @@
+> [!WARNING]
+> As kurrycat2004 stopped working on the mod to completely rewrite it, I "unforked" and archived this repo.
+> This repository is the new official one: [MPKMod/MPKMod](https://github.com/MPKMod/MPKMod).
+
 # MPK Mod
 
 [![Latest Build](https://github.com/kurrycat2004/MPKMod_2/actions/workflows/gradle.yml/badge.svg)](#snapshots)
